@@ -130,4 +130,40 @@ legend(20, 700, legend=c("Pete Rose", "Ted Williams", "Ty Cobb"), lty=1 : 3, lwd
 # * Ted Williams started off very strong, hitting high numbers of home runs. However he levelled off pretty early on. His HR production was a slower increasing curve than either Rose or Cobb. 
 
 
+# 7: retrosheet
 
+# Create dataframes for Sosa and McGwire (batting for 1998 seasson)
+data1998 <- read.csv("all1998.csv", header = FALSE)
+fields <- read.csv("fields.csv")
+names(data1998) <- fields[, "Header"]
+retro.ids <- read.csv("retrosheetIDs.csv")
+
+sosa.id <- as.character(subset(retro.ids, FIRST=="Sammy" & LAST=="Sosa")$ID)
+mac.id <- as.character(subset(retro.ids, FIRST=="Mark" & LAST=="McGwire")$ID)
+
+sosa.data <- subset(data1998, BAT_ID==sosa.id)
+mac.data <- subset(data1998, BAT_ID==mac.id)
+
+# Restrict data frames to those events where a batting event occurred (BAT_EVENT_FL is TRUE)
+
+sosa.data <- subset(sosa.data, BAT_EVENT_FL == TRUE)
+mac.data <- subset(mac.data, BAT_EVENT_FL == TRUE)
+
+# For each data frame, add a PA variable that gives the # of the plate appearance (the function #nrow gives number of rows in the data frame)
+
+sosa.data$PA <- 1:nrow(sosa.data)
+mac.data$PA <- 1:nrow(mac.data)
+
+# Return PA# of plate appearances where the player hit a home run
+
+mac.HR.PA <- mac.data$PA[mac.data$EVENT_CD==23]
+sosa.HR.PA <- sosa.data$PA[sosa.data$EVENT_CD==23]
+
+# Compute spacings between HR plate appearances using the #diff function
+mac.spacings <- diff(c(0, mac.HR.PA))
+sosa.spacings <- diff(c(0, sosa.HR.PA))
+
+# use #summary and #hist to compare spacings
+hist(mac.spacings)
+
+# Mark McGwire is a slightly more consistent HR hitter with a lower mean and median spacing as well as a lower 3rd quintile and max value. 
