@@ -186,3 +186,78 @@ IRtable$IRW <- IR(IRtable$RS, IRtable$RA)
 xtabs(IRW ~ RS + RA, data=IRtable)
 
 # Interpretation: In very low-scoring environments, a comparatively low number of incremental runs is needed for a win (~6). In normal environments, ~10 incremental runs is needed for a win. 
+
+
+# EXERCISES
+
+# 1. WPct and Run Differential across decades
+
+# a) refit the model we computed for 2001 data for 1961-1970, 1971-1980, and 1981-1990, and 1991-2000 seasons.
+
+regressionFormula <- function(givenFrame) {
+	# given a dataframe, compute the regression formula
+	regressionModel <- lm(WPct ~ RD, data=givenFrame)
+}
+
+
+teamWPctFrame <- function(minYear, maxYear) {
+	baseFrame <- subset(teams, yearID >= minYear & yearID <= maxYear)
+	baseFrame$RD <- with(baseFrame, R - RA)
+	baseFrame$WPct <- with(baseFrame, W / (W + L))
+	
+	regressionModel <- regressionFormula(baseFrame)
+	baseFrame$linWPct <- predict(regressionModel)
+	baseFrame$linResiduals <- residuals(regressionModel)
+	
+	baseFrame
+}
+
+teams1960s <- teamWPctFrame(1961, 1970)
+teams1970s <- teamWPctFrame(1971, 1980)
+teams1980s <- teamWPctFrame(1981, 1990)
+teams1990s <- teamWPctFrame(1991, 2000)
+
+# We would like to use the regression formula for each frame to predict WPct for a team w/ 10 run differential
+
+f1960s <- regressionFormula(teams1960s)
+f1960s # WPct = 0.499933 + 0.000704 * RD = 0.506983
+
+f1970s <- regressionFormula(teams1970s)
+f1970s # WPct = 0.4999884 + 0.0006375 * RD = 0.5063634
+
+f1980s <- regressionFormula(teams1980s)
+f1980s # WPct = 0.4999448 + 0.0007014 * RD = 0.5069588
+
+f1990s <- regressionFormula(teams1990s)
+f1990s # WPct = 0.4999994 + 0.0006276 * RD = 0.5062754
+
+# Predicted WPct is slightly higher in the 1960s and 1980s for a team with 10-run differential; slightly lower in 1970s and 1990s.
+
+# 2. Pythagorean residuals for poor and great teams in 19th century
+
+# a) fit a pythagorean formula model to the run-differential , win-loss data for teams who played during the 19th century. 
+# Remember: W/L = R^k / RA^k 
+# log(W/L) = k * (log(R / RA))   <-- we are solving for K, i.e. modelling K
+
+team1800s <- teamWPctFrame(1800, 1899)
+team1800s
+
+team1800s$logWRatio <- log(team1800s$W / team1800s$L)
+team1800s$logRRatio <- log(team1800s$R / team1800s$RA)
+
+
+pytFit <- lm(logWRatio ~ 0 + logRRatio, data=team1800s[!team1800s$logWRatio == -Inf, ], na.action=NULL) # Gives coefficient = 1.915
+
+team1800s$pytWPct <- with(team1800s, R^1.915 / (R^1.915 + RA^1.915))
+team1800s$pytResidual <- with(team1800s, WPct - pytWPct)
+team1800s$pytRMSE <- sqrt(mean(team1800s$pytResidual ^ 2))
+team1800s
+
+plot(team1800s$RD, team1800s$pytResidual, xlab="Run Differential", ylab="Residual")
+abline(h=0, lty=3)
+summary(team1800s$pytResidual)
+
+# It looks like for the 1800s residuals tend to skew negative, so the pythagorean formula overpredicts WPct at all RD
+
+
+
